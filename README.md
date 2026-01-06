@@ -6,7 +6,7 @@ Questo repository contiene:
 - `queries.sql`: query di estrazione e view per export CSV
 - `data_dictionary.md`: dizionario dati
 - `population_guidelines.md`: linee guida per popolamento/manutenzione
-- `ER_AlfaServizi.png`: diagramma ER (immagine)
+- `ER_AlfaServizi.pgerdV3.png`: diagramma ER (immagine)
 
 ## Deploy rapido (PostgreSQL)
 1. Creare un database vuoto, poi:
@@ -17,3 +17,4 @@ Questo repository contiene:
 ## Export CSV (esempio)
 Da psql:
 \copy (SELECT * FROM acn.v_acn_profile_min WHERE org_name='AlfaServizi S.r.l.') TO 'acn_profile_min.csv' CSV HEADER;
+
