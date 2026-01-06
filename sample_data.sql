@@ -8,12 +8,17 @@ ON CONFLICT (org_name) DO NOTHING;
 
 -- locations
 INSERT INTO location (org_id, location_name, address, city, country)
-SELECT org_id, 'HQ Milano', 'Via Innovazione 10', 'Milano', 'IT'
+SELECT org_id, 'HQ Roma', 'Via Innovazione 10', 'Roma', 'IT'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, location_name) DO NOTHING;
 
 INSERT INTO location (org_id, location_name, address, city, country)
-SELECT org_id, 'DC Torino', 'Strada Datacenter 3', 'Torino', 'IT'
+SELECT org_id, 'DC Torino', 'Strada Datacenter 25', 'Torino', 'IT'
+FROM organization WHERE org_name='AlfaServizi S.r.l.'
+ON CONFLICT (org_id, location_name) DO NOTHING;
+
+INSERT INTO location (org_id, location_name, address, city, country)
+SELECT org_id, 'DC Milano', 'Strada Datacenter 1', 'Milano', 'IT'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, location_name) DO NOTHING;
 
@@ -22,22 +27,28 @@ INSERT INTO role (role_code, role_name) VALUES
  ('CISO','Responsabile Sicurezza Informazioni'),
  ('DPO','Data Protection Officer'),
  ('IT_MGR','IT Manager'),
- ('SERV_MGR','Service Manager')
+ ('SERV_MGR','Service Manager'),
+ ('EMP','Employee')
 ON CONFLICT (role_code) DO NOTHING;
 
 -- people
 INSERT INTO person (org_id, full_name, email, phone, department)
-SELECT org_id, 'Giulia Bianchi', 'giulia.bianchi@alfaservizi.it', '+39-02-0000001', 'IT'
+SELECT org_id, 'Giulia Bianchi', 'giulia.bianchi@alfaservizi.it', '+39-06-0000001', 'IT'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, email) DO NOTHING;
 
 INSERT INTO person (org_id, full_name, email, phone, department)
-SELECT org_id, 'Marco Rossi', 'marco.rossi@alfaservizi.it', '+39-02-0000002', 'Security'
+SELECT org_id, 'Marco Rossi', 'marco.rossi@alfaservizi.it', '+39-06-0000002', 'Security'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, email) DO NOTHING;
 
 INSERT INTO person (org_id, full_name, email, phone, department)
-SELECT org_id, 'Sara Verdi', 'sara.verdi@alfaservizi.it', '+39-02-0000003', 'Operations'
+SELECT org_id, 'Sara Verdi', 'sara.verdi@alfaservizi.it', '+39-06-0000003', 'Operations'
+FROM organization WHERE org_name='AlfaServizi S.r.l.'
+ON CONFLICT (org_id, email) DO NOTHING;
+
+INSERT INTO person (org_id, full_name, email, phone, department)
+SELECT org_id, 'Alberto Mauro', 'alberto.mauro@alfaservizi.it', '+39-06-0000004', 'Operations'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, email) DO NOTHING;
 
@@ -49,7 +60,7 @@ JOIN role r ON r.role_code='IT_MGR'
 WHERE p.email='giulia.bianchi@alfaservizi.it'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO person_role (person_id, role_id, valid_from)
+INSERT INTO person_roleperson_role (person_id, role_id, valid_from)
 SELECT p.person_id, r.role_id, CURRENT_DATE
 FROM person p
 JOIN role r ON r.role_code='CISO'
@@ -62,6 +73,14 @@ FROM person p
 JOIN role r ON r.role_code='SERV_MGR'
 WHERE p.email='sara.verdi@alfaservizi.it'
 ON CONFLICT DO NOTHING;
+
+INSERT INTO person_role (person_id, role_id, valid_from)
+SELECT p.person_id, r.role_id, CURRENT_DATE
+FROM person p
+JOIN role r ON r.role_code='EMP'
+WHERE p.email='alberto.mauro@alfaservizi.it'
+ON CONFLICT DO NOTHING;
+
 
 -- suppliers (versioning through function)
 SELECT acn.upsert_supplier(o.org_id,'SUP-AWS','Amazon Web Services','cloud','CNTR-2024-001','CRITICAL')
