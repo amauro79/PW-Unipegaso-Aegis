@@ -27,8 +27,7 @@ INSERT INTO role (role_code, role_name) VALUES
  ('CISO','Responsabile Sicurezza Informazioni'),
  ('DPO','Data Protection Officer'),
  ('IT_MGR','IT Manager'),
- ('SERV_MGR','Service Manager'),
- ('EMP','Employee')
+ ('SERV_MGR','Service Manager')
 ON CONFLICT (role_code) DO NOTHING;
 
 -- people
@@ -48,7 +47,7 @@ FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, email) DO NOTHING;
 
 INSERT INTO person (org_id, full_name, email, phone, department)
-SELECT org_id, 'Alberto Mauro', 'alberto.mauro@alfaservizi.it', '+39-06-0000004', 'Operations'
+SELECT org_id, 'Alberto Mauro', 'alberto.mauro@alfaservizi.it', '+39-06-0000004', 'Privacy'
 FROM organization WHERE org_name='AlfaServizi S.r.l.'
 ON CONFLICT (org_id, email) DO NOTHING;
 
@@ -60,7 +59,7 @@ JOIN role r ON r.role_code='IT_MGR'
 WHERE p.email='giulia.bianchi@alfaservizi.it'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO person_roleperson_role (person_id, role_id, valid_from)
+INSERT INTO person_role (person_id, role_id, valid_from)
 SELECT p.person_id, r.role_id, CURRENT_DATE
 FROM person p
 JOIN role r ON r.role_code='CISO'
@@ -77,7 +76,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO person_role (person_id, role_id, valid_from)
 SELECT p.person_id, r.role_id, CURRENT_DATE
 FROM person p
-JOIN role r ON r.role_code='EMP'
+JOIN role r ON r.role_code='DPO'
 WHERE p.email='alberto.mauro@alfaservizi.it'
 ON CONFLICT DO NOTHING;
 
@@ -89,11 +88,17 @@ FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
 SELECT acn.upsert_supplier(o.org_id,'SUP-TIM','TIM Enterprise','connectivity','CNTR-2023-014','HIGH')
 FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
 
+SELECT acn.upsert_supplier(o.org_id,'SUP-Azure','Microsoft Azure','connectivity','CNTR-2025-011','HIGH')
+FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
+
 -- services
 SELECT acn.upsert_service(o.org_id,'SVC-CRM','CRM Clienti','Piattaforma CRM multitenant','CRITICAL','99.9%',4,1)
 FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
 
 SELECT acn.upsert_service(o.org_id,'SVC-SIEM','Security Monitoring','Raccolta log e correlazione eventi','HIGH','99.5%',8,4)
+FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
+
+SELECT acn.upsert_service(o.org_id,'SVC-SW','Service Control Room','Piattaforma di monitoraggio degli allarmi','HIGH','99.9%',1,1)
 FROM acn.organization o WHERE o.org_name='AlfaServizi S.r.l.';
 
 -- assets
@@ -113,7 +118,7 @@ WITH org AS (
   SELECT org_id FROM acn.organization WHERE org_name='AlfaServizi S.r.l.'
 ),
 loc AS (
-  SELECT location_id FROM acn.location l JOIN org o ON o.org_id=l.org_id WHERE location_name='HQ Milano'
+  SELECT location_id FROM acn.location l JOIN org o ON o.org_id=l.org_id WHERE location_name='HQ Roma'
 ),
 owner AS (
   SELECT person_id FROM acn.person p JOIN org o ON o.org_id=p.org_id WHERE email='marco.rossi@alfaservizi.it'
@@ -121,6 +126,17 @@ owner AS (
 SELECT acn.upsert_asset((SELECT org_id FROM org),'AST-SIEM','SIEM Platform','SOFTWARE','Stack SIEM e log collector','HIGH',
                        (SELECT location_id FROM loc),NULL,(SELECT person_id FROM owner));
 
+WITH org AS (
+  SELECT org_id FROM acn.organization WHERE org_name='AlfaServizi S.r.l.'
+),
+loc AS (
+  SELECT location_id FROM acn.location l JOIN org o ON o.org_id=l.org_id WHERE location_name='DC Milano'
+),
+owner AS (
+  SELECT person_id FROM acn.person p JOIN org o ON o.org_id=p.org_id WHERE email='alberto.mauro@alfaservizi.it'
+)
+SELECT acn.upsert_asset((SELECT org_id FROM org),'SVC-SW','SCR Platform','SOFTWARE','Service Control Room','HIGH',
+                       (SELECT location_id FROM loc),NULL,(SELECT person_id FROM owner));
 -- dependencies
 INSERT INTO service_asset_dependency (org_id, service_id, asset_id, dep_type, is_critical_dep, note)
 SELECT o.org_id, s.service_id, a.asset_id, 'RUNS_ON', TRUE, 'CRM usa DB principale'
@@ -164,5 +180,6 @@ JOIN person p ON p.org_id=o.org_id AND p.email='giulia.bianchi@alfaservizi.it'
 JOIN asset a ON a.org_id=o.org_id AND a.is_current AND a.business_key='AST-DB-01'
 WHERE o.org_name='AlfaServizi S.r.l.'
 ON CONFLICT DO NOTHING;
+
 
 COMMIT;
