@@ -246,10 +246,10 @@ INSERT INTO control_assessment (profile_id, subcategory_id, implementation, evid
 SELECT (SELECT profile_id FROM cur), sc.subcategory_id, x.impl, x.evidence,
        CASE WHEN sc.code LIKE 'ID.%' THEN (SELECT person_id FROM p_it) ELSE (SELECT person_id FROM p_ciso) END
 FROM (VALUES
-  ('ID.AM-1','IMPLEMENTED','Inventario asset mantenuto nel DB (tabelle asset/location) con business_key e versioning.'),
-  ('ID.AM-2','PARTIAL','Inventario applicazioni presente; mancano alcuni componenti legacy.'),
-  ('PR.AC-1','PARTIAL','Gestione identità con IAM su AWS; formalizzazione processi di revisione accessi in corso.'),
-  ('DE.CM-1','IMPLEMENTED','Monitoraggio continuo tramite SIEM; log centralizzati e alerting.')
+  ('ID.AM-1','IMPLEMENTED'::implementation_level,'Inventario asset mantenuto nel DB (tabelle asset/location) con business_key e versioning.'),
+  ('ID.AM-2','PARTIAL'::implementation_level,'Inventario applicazioni presente; mancano alcuni componenti legacy.'),
+  ('PR.AC-1','PARTIAL'::implementation_level,'Gestione identità con IAM su AWS; formalizzazione processi di revisione accessi in corso.'),
+  ('DE.CM-1','IMPLEMENTED'::implementation_level,'Monitoraggio continuo tramite SIEM; log centralizzati e alerting.')
 ) AS x(code, impl, evidence)
 JOIN control_subcategory sc ON sc.code=x.code
 ON CONFLICT (profile_id, subcategory_id) DO NOTHING;
