@@ -106,3 +106,23 @@ Dipendenza tra servizi (upstream/downstream).
 - `downstream_service_id` (FK → service)
 - `dep_type`
 - `note`
+
+---
+
+## FNCS / NIST CSF (profilo con controlli e subcategory)
+
+Per supportare la compilazione del **profilo (Current/Target)** secondo il Framework Nazionale per la Cybersecurity
+(struttura Function → Category → Subcategory), lo schema include le seguenti tabelle:
+
+- `control_function`: funzioni (ID, PR, DE, RS, RC)
+- `control_category`: categorie (es. `ID.AM`, `PR.AC`)
+- `control_subcategory`: subcategory (es. `ID.AM-1`)
+- `control_profile`: profilo per organizzazione e tipo (`CURRENT`/`TARGET`)
+- `control_assessment`: stato di implementazione della subcategory nel profilo + evidenza + owner
+- `asset_control`: associazione subcategory ↔ asset (asset interessati/controllati)
+- `service_control` (opzionale): associazione subcategory ↔ servizio
+
+### Note operative
+- Il profilo è modellato come **snapshot** (es. “Profilo Attuale 2026-02”): consente storicizzazione dei profili nel tempo.
+- `control_assessment` contiene il livello di implementazione e un campo `evidence` per indicare l’evidenza disponibile.
+- `asset_control` consente di legare esplicitamente gli asset ai controlli (richiesto dal docente: “gli asset vanno associati ai controlli”).
