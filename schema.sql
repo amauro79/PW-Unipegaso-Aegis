@@ -351,6 +351,93 @@ BEGIN
   RETURN v_new_id;
 END $$;
 
+-- ---------- FNCS / NIST CSF controls (per "profilo" ACN) ----------
+-- Obiettivo: rappresentare Function/Category/Subcategory e lo stato di implementazione (Current/Target),
+-- collegando i controlli agli asset (e, opzionalmente, ai servizi).
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'fncs_profile_type') THEN
+    CREATE TYPE fncs_profile_type AS ENUM ('CURRENT','TARGET');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'implementation_level') THEN
+    CREATE TYPE implementation_level AS ENUM ('NOT_IMPLEMENTED','PARTIAL','IMPLEMENTED');
+  END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS control_function (
+  function_id   BIGSERIAL PRIMARY KEY,
+  code          TEXT NOT NULL UNIQUE, -- ID, PR, DE, RS, RC
+  name          TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS control_category (
+  category_id   BIGSERIAL PRIMARY KEY,
+  function_id   BIGINT NOT NULL REFERENCES control_function(function_id) ON DELETE CASCADE,
+  code          TEXT NOT NULL UNIQUE, -- es. ID.AM
+  name          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ctrl_cat_fn ON control_category(function_id);
+
+CREATE TABLE IF NOT EXISTS control_subcategory (
+  subcategory_id BIGSERIAL PRIMARY KEY,
+  category_id    BIGINT NOT NULL REFERENCES control_category(category_id) ON DELETE CASCADE,
+  code           TEXT NOT NULL UNIQUE, -- es. ID.AM-1
+  description    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ctrl_sub_cat ON control_subcategory(category_id);
+
+-- Profilo (Current / Target) per organizzazione: consente versioni multiple nel tempo
+CREATE TABLE IF NOT EXISTS control_profile (
+  profile_id    BIGSERIAL PRIMARY KEY,
+  org_id        BIGINT NOT NULL REFERENCES organization(org_id) ON DELETE CASCADE,
+  profile_type  fncs_profile_type NOT NULL,
+  profile_name  TEXT NOT NULL, -- es. "Profilo Attuale 2026-02"
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (org_id, profile_type, profile_name)
+);
+CREATE INDEX IF NOT EXISTS idx_ctrl_profile_org ON control_profile(org_id, profile_type);
+
+-- Stato di implementazione della subcategory nel profilo (Current/Target)
+CREATE TABLE IF NOT EXISTS control_assessment (
+  assessment_id        BIGSERIAL PRIMARY KEY,
+  profile_id           BIGINT NOT NULL REFERENCES control_profile(profile_id) ON DELETE CASCADE,
+  subcategory_id       BIGINT NOT NULL REFERENCES control_subcategory(subcategory_id) ON DELETE CASCADE,
+  implementation       implementation_level NOT NULL,
+  evidence             TEXT,
+  assessed_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  owner_person_id      BIGINT REFERENCES person(person_id) ON DELETE SET NULL,
+  UNIQUE (profile_id, subcategory_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ctrl_assess_profile ON control_assessment(profile_id);
+CREATE INDEX IF NOT EXISTS idx_ctrl_assess_sub ON control_assessment(subcategory_id);
+
+-- Mappatura controllo ↔ asset (quali asset sono coperti/impattati dalla subcategory)
+CREATE TABLE IF NOT EXISTS asset_control (
+  asset_control_id BIGSERIAL PRIMARY KEY,
+  org_id           BIGINT NOT NULL REFERENCES organization(org_id) ON DELETE CASCADE,
+  asset_id         BIGINT NOT NULL REFERENCES asset(asset_id) ON DELETE CASCADE,
+  subcategory_id   BIGINT NOT NULL REFERENCES control_subcategory(subcategory_id) ON DELETE CASCADE,
+  applicable       BOOLEAN NOT NULL DEFAULT TRUE,
+  note             TEXT,
+  UNIQUE (asset_id, subcategory_id)
+);
+CREATE INDEX IF NOT EXISTS idx_asset_ctrl_asset ON asset_control(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_ctrl_sub ON asset_control(subcategory_id);
+
+-- (Opzionale) Mappatura controllo ↔ servizio
+CREATE TABLE IF NOT EXISTS service_control (
+  service_control_id BIGSERIAL PRIMARY KEY,
+  org_id             BIGINT NOT NULL REFERENCES organization(org_id) ON DELETE CASCADE,
+  service_id         BIGINT NOT NULL REFERENCES service(service_id) ON DELETE CASCADE,
+  subcategory_id     BIGINT NOT NULL REFERENCES control_subcategory(subcategory_id) ON DELETE CASCADE,
+  applicable         BOOLEAN NOT NULL DEFAULT TRUE,
+  note               TEXT,
+  UNIQUE (service_id, subcategory_id)
+);
+CREATE INDEX IF NOT EXISTS idx_service_ctrl_service ON service_control(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_ctrl_sub ON service_control(subcategory_id);
+
 -- ---------- "ACN profile" export views ----------
 -- View: elenco asset critici con owner + servizi che li usano
 CREATE OR REPLACE VIEW acn.v_assets_critical_current AS
@@ -425,5 +512,49 @@ LEFT JOIN acn.asset a ON a.asset_id = sad.asset_id AND a.is_current = TRUE
 LEFT JOIN acn.service_supplier_dependency ssd ON ssd.service_id = s.service_id
 LEFT JOIN acn.supplier sup ON sup.supplier_id = ssd.supplier_id AND sup.is_current = TRUE
 WHERE s.is_current = TRUE;
+
+-- ---------- FNCS profile export views ----------
+-- View: dettaglio profilo (Current/Target) per subcategory con evidenze e asset associati
+CREATE OR REPLACE VIEW acn.v_fncs_profile_detail AS
+SELECT
+  o.org_name,
+  cp.profile_type,
+  cp.profile_name,
+  f.code  AS function_code,
+  c.code  AS category_code,
+  sc.code AS subcategory_code,
+  sc.description AS subcategory_description,
+  ca.implementation,
+  ca.evidence,
+  ca.assessed_at,
+  po.full_name AS control_owner_name,
+  po.email     AS control_owner_email,
+  string_agg(DISTINCT a.business_key, ', ' ORDER BY a.business_key) AS related_assets
+FROM acn.control_profile cp
+JOIN acn.organization o ON o.org_id = cp.org_id
+JOIN acn.control_assessment ca ON ca.profile_id = cp.profile_id
+JOIN acn.control_subcategory sc ON sc.subcategory_id = ca.subcategory_id
+JOIN acn.control_category c ON c.category_id = sc.category_id
+JOIN acn.control_function f ON f.function_id = c.function_id
+LEFT JOIN acn.person po ON po.person_id = ca.owner_person_id
+LEFT JOIN acn.asset_control ac ON ac.org_id = cp.org_id AND ac.subcategory_id = sc.subcategory_id AND ac.applicable = TRUE
+LEFT JOIN acn.asset a ON a.asset_id = ac.asset_id AND a.is_current = TRUE
+GROUP BY
+  o.org_name, cp.profile_type, cp.profile_name, f.code, c.code, sc.code, sc.description,
+  ca.implementation, ca.evidence, ca.assessed_at, po.full_name, po.email;
+
+-- View: riepilogo numerico (quante subcategory implementate/partial/non) per profilo
+CREATE OR REPLACE VIEW acn.v_fncs_profile_summary AS
+SELECT
+  o.org_name,
+  cp.profile_type,
+  cp.profile_name,
+  ca.implementation,
+  count(*) AS n_subcategories
+FROM acn.control_profile cp
+JOIN acn.organization o ON o.org_id = cp.org_id
+JOIN acn.control_assessment ca ON ca.profile_id = cp.profile_id
+GROUP BY o.org_name, cp.profile_type, cp.profile_name, ca.implementation
+ORDER BY o.org_name, cp.profile_type, cp.profile_name, ca.implementation;
 
 COMMIT;
