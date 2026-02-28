@@ -20,7 +20,8 @@ Da psql:
 - Export “minimo” (asset/servizi/dipendenze):
 \copy (SELECT * FROM acn.v_acn_profile_min WHERE org_name='AlfaServizi S.r.l.') TO 'acn_profile_min.csv' CSV HEADER;
 - Export profilo FNCS (dettaglio Current):
-  - `\copy (SELECT * FROM acn.v_fncs_profile_detail WHERE org_name='AlfaServizi S.r.l.' AND profile_type='CURRENT') TO 'fncs_profile_current.csv' CSV HEADER;`
+\copy (SELECT * FROM acn.v_fncs_profile_detail WHERE org_name='AlfaServizi S.r.l.' AND profile_type='CURRENT') TO 'fncs_profile_current.csv' CSV HEADER;
+
 
 
 
