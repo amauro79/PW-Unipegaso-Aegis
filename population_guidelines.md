@@ -53,3 +53,22 @@ La view `acn.v_acn_profile_min` è pensata per un export immediato:
 - verificare periodicamente che per i servizi critici esista un contatto primario
 - verificare che `is_current=TRUE` sia unico per (org_id, business_key) nelle tabelle versionate (garantito dalla logica di upsert)
 - aggiungere indici in base ai filtri più frequenti (org_id, is_current, business_key)
+
+- 
+## 8) Profilo FNCS (Current/Target): popolamento consigliato
+Per costruire un profilo coerente con il Framework Nazionale:
+1. Popolare il catalogo controlli:
+   - `control_function`, `control_category`, `control_subcategory`
+   (anche con un sottoinsieme dimostrativo, purché sia strutturato).
+2. Creare uno o più profili per organizzazione:
+   - `control_profile` con `profile_type = CURRENT` o `TARGET`.
+3. Valutare ogni subcategory nel profilo:
+   - inserire righe in `control_assessment` con:
+     - `implementation` (NOT_IMPLEMENTED / PARTIAL / IMPLEMENTED),
+     - `evidence` (testo breve e verificabile),
+     - `owner_person_id` (referente interno).
+4. Associare gli asset rilevanti alle subcategory applicabili:
+   - inserire righe in `asset_control` (e, se utile, `service_control`).
+Output utile:
+- `v_fncs_profile_detail` per il profilo dettagliato (con asset associati),
+- `v_fncs_profile_summary` per il riepilogo numerico (stato complessivo).
