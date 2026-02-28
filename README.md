@@ -6,8 +6,8 @@ Questo repository contiene:
 - `queries.sql`: query di estrazione e test (include viste per profilo FNCS)
 - `data_dictionary.md`: dizionario dati aggiornato
 - `population_guidelines.md`: linee guida per popolamento/manutenzione aggiornato
-- `ER_AlfaServizi.pgerdV3.png`: diagramma ER (immagine)
-- `ER_AlfaServizi.pgerd`: progetto diagramma ER (pgAdmin 4)
+- `ER_AlfaServizi.pgerdV4.png`: diagramma ER (immagine)
+- `ER_AlfaServiziV4.pgerd`: progetto diagramma ER (pgAdmin 4)
 
 ## Deploy rapido (PostgreSQL)
 1. Creare un database vuoto, poi:
@@ -21,6 +21,7 @@ Da psql:
 \copy (SELECT * FROM acn.v_acn_profile_min WHERE org_name='AlfaServizi S.r.l.') TO 'acn_profile_min.csv' CSV HEADER;
 - Export profilo FNCS (dettaglio Current):
   - `\copy (SELECT * FROM acn.v_fncs_profile_detail WHERE org_name='AlfaServizi S.r.l.' AND profile_type='CURRENT') TO 'fncs_profile_current.csv' CSV HEADER;`
+
 
 
 
