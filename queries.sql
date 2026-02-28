@@ -42,5 +42,21 @@ SELECT * FROM acn.v_acn_profile_min
 WHERE org_name='AlfaServizi S.r.l.'
 ORDER BY service_criticality DESC, service_name;
 
+
+-- 5) Profilo FNCS (dettaglio): subcategory + stato implementazione + asset associati
+SELECT * FROM acn.v_fncs_profile_detail
+WHERE org_name='AlfaServizi S.r.l.' AND profile_type='CURRENT'
+ORDER BY function_code, category_code, subcategory_code;
+
+-- 6) Profilo FNCS (riepilogo): conteggio subcategory per livello (CURRENT vs TARGET)
+SELECT * FROM acn.v_fncs_profile_summary
+WHERE org_name='AlfaServizi S.r.l.'
+ORDER BY profile_type, profile_name, implementation;
+
+-- Suggerimento export CSV (da psql):
+-- \copy (SELECT * FROM acn.v_fncs_profile_detail WHERE org_name='AlfaServizi S.r.l.' AND profile_type='CURRENT')
+--   TO 'fncs_profile_current.csv' CSV HEADER;
+
+
 -- Suggerimento export CSV (da psql):
 -- \copy (SELECT * FROM acn.v_acn_profile_min WHERE org_name='AlfaServizi S.r.l.') TO 'acn_profile_min.csv' CSV HEADER;
