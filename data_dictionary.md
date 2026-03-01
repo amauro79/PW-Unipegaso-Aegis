@@ -125,4 +125,4 @@ Per supportare la compilazione del **profilo (Current/Target)** secondo il Frame
 ### Note operative
 - Il profilo è modellato come **snapshot** (es. “Profilo Attuale 2026-02”): consente storicizzazione dei profili nel tempo.
 - `control_assessment` contiene il livello di implementazione e un campo `evidence` per indicare l’evidenza disponibile.
-- `asset_control` consente di legare esplicitamente gli asset ai controlli (richiesto dal docente: “gli asset vanno associati ai controlli”).
+- `asset_control` consente di legare esplicitamente gli asset ai controlli (richiesto dal docente nella prevalutazione del PW: “gli asset vanno associati ai controlli”).
